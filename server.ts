@@ -97,3 +97,5 @@ app.listen(PORT, () => {
   console.log(`   GET /api/temples_search?north=&south=&east=&west=&limit= - Search by geographic bounds`);
   console.log(`   GET /health - Health check`);
 });
+
+
