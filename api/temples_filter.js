@@ -33,6 +33,13 @@ async function connectToDatabase() {
 export default async function handler(req, res) {
   const { district } = req.query;
   try {
+    // Check if environment variable is defined
+    const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!MONGODB_URI) {
+      console.error('MONGO_URI environment variable is not defined');
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
     const { db } = await connectToDatabase();
     const temples = await db
       .collection("temples")
@@ -40,7 +47,10 @@ export default async function handler(req, res) {
       .toArray();
     res.status(200).json(temples);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Serverless function error:', err.message);
+    // Make sure we always return a proper HTTP response
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
   }
 }
