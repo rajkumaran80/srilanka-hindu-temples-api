@@ -1,18 +1,12 @@
 {
   "name": "srilanka-hindu-temples-api",
   "version": "1.0.0",
-  "description": "Node.js backend API for fetching Hindu temples",
+  "description": "Vercel Node.js serverless API for Hindu temples",
   "type": "module",
-  "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "vercel dev"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "mongodb": "^6.9.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
   }
 }
