@@ -1,13 +1,11 @@
 import express from "express";
 import { MongoClient } from "mongodb";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-const client = new MongoClient(process.env.MONGO_URI);
 
+// MongoDB client
+const client = new MongoClient(process.env.MONGO_URI);
 let db;
 
 async function connectDB() {
@@ -22,8 +20,8 @@ async function connectDB() {
 
 connectDB();
 
-// Endpoint to fetch all temples
-app.get("/temples", async (req, res) => {
+// GET /temples → fetch all temples
+app.get("/api/temples", async (req, res) => {
   try {
     const temples = await db.collection("temples").find({}).toArray();
     res.json(temples);
@@ -33,7 +31,7 @@ app.get("/temples", async (req, res) => {
 });
 
 // Optional: filter by district
-app.get("/temples/filter", async (req, res) => {
+app.get("/api/temples/filter", async (req, res) => {
   const { district } = req.query;
   try {
     const temples = await db
@@ -47,5 +45,5 @@ app.get("/temples/filter", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`API server listening at http://localhost:${port}`);
+  console.log(`Server listening at http://localhost:${port}`);
 });

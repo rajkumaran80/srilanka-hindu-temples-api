@@ -1,18 +1,18 @@
 {
   "name": "srilanka-hindu-temples-api",
   "version": "1.0.0",
-  "description": "Cloudflare Worker to fetch temples from MongoDB Atlas",
+  "description": "Node.js backend API for fetching Hindu temples",
   "type": "module",
-  "main": "src/worker.js",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "wrangler dev",
-    "build": "echo 'No build step needed for Worker'",
-    "start": "wrangler dev"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "mongodb": "^6.9.0"
   },
   "devDependencies": {
-    "wrangler": "^3.80.0"
+    "nodemon": "^3.0.2"
   }
 }
