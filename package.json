@@ -4,9 +4,15 @@
   "description": "Vercel Node.js serverless API for Hindu temples",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "node server.js",
+    "vercel-dev": "vercel dev"
   },
   "dependencies": {
+    "express": "^4.18.0",
     "mongodb": "^6.9.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.0",
+    "nodemon": "^3.0.0"
   }
 }
