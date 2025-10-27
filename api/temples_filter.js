@@ -1,27 +1,46 @@
 import { MongoClient } from "mongodb";
 
-const MONGO_URI="mongodb+srv://cloudflare-user:StrongPass123!@srilanka-cluster.6k82w97.mongodb.net/hindu-temples?retryWrites=true&w=majority"
-const client = new MongoClient(MONGO_URI);
-let db;
+// Global variable to cache the MongoDB client for reuse between function calls
+const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-async function getDB() {
-  if (!db) {
-    await client.connect();
-    db = client.db("hindu-temples");
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGO_URI or MONGODB_URI environment variable inside .env or Vercel environment variables');
+}
+
+let cachedClient = null;
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb };
   }
-  return db;
+
+  const client = new MongoClient(MONGODB_URI, {
+    maxPoolSize: 10, // Maintain up to 10 connections
+    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  });
+
+  await client.connect();
+  const db = client.db("hindu-temples");
+
+  cachedClient = client;
+  cachedDb = db;
+
+  return { client, db };
 }
 
 export default async function handler(req, res) {
   const { district } = req.query;
   try {
-    const db = await getDB();
+    const { db } = await connectToDatabase();
     const temples = await db
       .collection("temples")
       .find(district ? { district } : {})
       .toArray();
     res.status(200).json(temples);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }
