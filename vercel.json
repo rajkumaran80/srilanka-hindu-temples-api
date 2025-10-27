@@ -1,11 +1,9 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@18"
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "nodejs@18.x"
     }
-  },
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install"
+  ]
 }
