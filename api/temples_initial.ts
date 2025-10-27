@@ -1,14 +1,43 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, Db } from "mongodb";
+
+// Define interfaces for the API
+interface TempleDocument {
+  _id?: string;
+  name?: string;
+  location?: string;
+  district?: string;
+  description?: string;
+  [key: string]: any;
+}
+
+interface StatusResponse {
+  json: (data: any) => void;
+  end: () => void;
+}
+
+interface VercelResponse {
+  status: (code: number) => StatusResponse;
+  json: (data: any) => void;
+  headersSent?: boolean;
+}
+
+interface VercelRequest {
+  method: string;
+  headers: Record<string, string | string[] | undefined>;
+  body: string | null;
+  query: Record<string, string | any>;
+  url: string;
+}
 
 // Global variable to cache the MongoDB client for reuse between function calls
-const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+const MONGODB_URI: string = process.env.MONGO_URI || process.env.MONGODB_URI || '';
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGO_URI or MONGODB_URI environment variable inside .env or Vercel environment variables');
 }
 
-let cachedClient = null;
-let cachedDb = null;
+let cachedClient: MongoClient | null = null;
+let cachedDb: Db | null = null;
 
 async function connectToDatabase() {
   console.log('Connecting to database...');
@@ -40,18 +69,16 @@ async function connectToDatabase() {
   return { client, db };
 }
 
-export default async function handler(req, res) {
-
-  console.log('Temples Filter API handler called');
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  console.log('Temples Initial API handler called');
   console.log('Request method:', req.method);
   console.log('Request URL:', req.url);
-  console.log('Request query params:', req.query);
 
   try {
     console.log('Checking environment variables...');
     // Check if environment variable is defined
-    const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
-    if (!MONGODB_URI) {
+    const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!MONGO_URI) {
       console.error('MONGO_URI environment variable is not defined');
       return res.status(500).json({ error: 'Internal Server Error' });
     }
@@ -60,17 +87,19 @@ export default async function handler(req, res) {
     console.log('Connecting to database...');
     const { db } = await connectToDatabase();
 
-    const temples = await db.collection("temples").find().limit(5).toArray();
+    console.log('Querying temples collection with limit 5...');
+    const temples: TempleDocument[] = await db.collection<TempleDocument>("temples").find().limit(5).toArray();
 
     console.log(`Found ${temples.length} temples`);
     console.log('Sending successful response');
     res.status(200).json(temples);
-  } catch (err) {
-    console.error('==================== ERROR IN TEMPLE FILTER API ====================');
-    console.error('Error name:', err.name);
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
-    console.error('Error code:', err.code);
+  } catch (err: unknown) {
+    console.error('==================== ERROR IN TEMPLE INITIAL API ====================');
+    const error = err as any; // Type assertion for error handling
+    console.error('Error name:', error?.name);
+    console.error('Error message:', error?.message);
+    console.error('Error stack:', error?.stack);
+    console.error('Error code:', error?.code);
     console.error('MONGO_URI exists:', !!process.env.MONGO_URI);
     console.error('MONGODB_URI exists:', !!process.env.MONGODB_URI);
     console.error('===================================================================');

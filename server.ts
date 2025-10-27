@@ -29,8 +29,10 @@ interface VercelResponse {
 type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
 
 // Import the Vercel serverless functions
-const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
-const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
+const templesHandler: VercelHandler = (await import('./api/temples.ts')).default;
+const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.ts')).default;
+const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.ts')).default;
+const templesSearchHandler: VercelHandler = (await import('./api/temples_search.ts')).default;
 
 // Helper function to convert Express req/res to Vercel format
 function createVercelRequest(req: Request): VercelRequest {
@@ -67,6 +69,18 @@ app.get('/api/temples_filter', (req, res) => {
   templesFilterHandler(vercelReq, vercelRes);
 });
 
+app.get('/api/temples_initial', (req, res) => {
+  const vercelReq = createVercelRequest(req);
+  const vercelRes = createVercelResponse(res);
+  templesInitialHandler(vercelReq, vercelRes);
+});
+
+app.get('/api/temples_search', (req, res) => {
+  const vercelReq = createVercelRequest(req);
+  const vercelRes = createVercelResponse(res);
+  templesSearchHandler(vercelReq, vercelRes);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sri Lanka Hindu Temples API is running locally' });
@@ -77,7 +91,9 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Sri Lanka Hindu Temples API running locally on http://localhost:${PORT}`);
   console.log(`📚 API endpoints:`);
-  console.log(`   GET /api/temples`);
-  console.log(`   GET /api/temples_filter?district=<district>`);
-  console.log(`   GET /health`);
+  console.log(`   GET /api/temples - Get all temples`);
+  console.log(`   GET /api/temples_filter?district=<district> - Filter temples by district`);
+  console.log(`   GET /api/temples_initial - Get first 5 temples`);
+  console.log(`   GET /api/temples_search?north=&south=&east=&west=&limit= - Search by geographic bounds`);
+  console.log(`   GET /health - Health check`);
 });
