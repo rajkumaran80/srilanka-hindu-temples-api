@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
 
-const client = new MongoClient(process.env.MONGO_URI);
+const MONGO_URI="mongodb+srv://cloudflare-user:StrongPass123!@srilanka-cluster.6k82w97.mongodb.net/hindu-temples?retryWrites=true&w=majority"
+const client = new MongoClient(MONGO_URI);
 
 let db;
 
