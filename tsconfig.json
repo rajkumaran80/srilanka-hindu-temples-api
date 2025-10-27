@@ -14,8 +14,7 @@
     "declaration": false,
     "outDir": "./dist",
     "rootDir": "./",
-    "types": ["node"],
-    "allowImportingTsExtensions": true
+    "types": ["node"]
   },
   "include": [
     "server.ts",

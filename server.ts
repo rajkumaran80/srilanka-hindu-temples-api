@@ -29,10 +29,10 @@ interface VercelResponse {
 type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
 
 // Import the Vercel serverless functions
-const templesHandler: VercelHandler = (await import('./api/temples.ts')).default;
-const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.ts')).default;
-const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.ts')).default;
-const templesSearchHandler: VercelHandler = (await import('./api/temples_search.ts')).default;
+const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
+const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
+const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.js')).default;
+const templesSearchHandler: VercelHandler = (await import('./api/temples_search.js')).default;
 
 // Helper function to convert Express req/res to Vercel format
 function createVercelRequest(req: Request): VercelRequest {
@@ -97,5 +97,3 @@ app.listen(PORT, () => {
   console.log(`   GET /api/temples_search?north=&south=&east=&west=&limit= - Search by geographic bounds`);
   console.log(`   GET /health - Health check`);
 });
-
-
