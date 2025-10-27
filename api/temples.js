@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     const temples = await db.collection("temples").find({}).toArray();
     res.status(200).json(temples);
   } catch (err) {
-    console.error(err);
+    console.error('db error', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
