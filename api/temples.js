@@ -11,9 +11,14 @@ let cachedClient = null;
 let cachedDb = null;
 
 async function connectToDatabase() {
+  console.log('Connecting to database...');
+
   if (cachedClient && cachedDb) {
+    console.log('Using cached MongoDB connection');
     return { client: cachedClient, db: cachedDb };
   }
+
+  console.log('Creating new MongoDB connection');
 
   const client = new MongoClient(MONGODB_URI, {
     maxPoolSize: 10, // Maintain up to 10 connections
@@ -21,17 +26,27 @@ async function connectToDatabase() {
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
   });
 
+  console.log('Attempting to connect to MongoDB...');
   await client.connect();
+  console.log('MongoDB connection established');
+
   const db = client.db("hindu-temples");
+  console.log(`Using database: hindu-temples`);
 
   cachedClient = client;
   cachedDb = db;
 
+  console.log('Connection cached for reuse');
   return { client, db };
 }
 
 export default async function handler(req, res) {
+  console.log('Temples API handler called');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+
   try {
+    console.log('Checking environment variables...');
     // Check if environment variable is defined
     const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
     if (!MONGODB_URI) {
@@ -39,11 +54,26 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
 
+    console.log('Environment variable check passed');
+    console.log('Connecting to database...');
     const { db } = await connectToDatabase();
+
+    console.log('Querying temples collection...');
     const temples = await db.collection("temples").find({}).toArray();
+
+    console.log(`Found ${temples.length} temples`);
+    console.log('Sending successful response');
     res.status(200).json(temples);
   } catch (err) {
-    console.error('Serverless function error:', err.message);
+    console.error('==================== ERROR IN TEMPLE API ====================');
+    console.error('Error name:', err.name);
+    console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
+    console.error('Error code:', err.code);
+    console.error('MONGO_URI exists:', !!process.env.MONGO_URI);
+    console.error('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+    console.error('===========================================================');
+
     // Make sure we always return a proper HTTP response
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal Server Error' });
