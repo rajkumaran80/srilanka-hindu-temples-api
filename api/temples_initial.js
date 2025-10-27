@@ -41,7 +41,6 @@ async function connectToDatabase() {
 }
 
 export default async function handler(req, res) {
-  const { district } = req.query;
 
   console.log('Temples Filter API handler called');
   console.log('Request method:', req.method);
@@ -61,13 +60,9 @@ export default async function handler(req, res) {
     console.log('Connecting to database...');
     const { db } = await connectToDatabase();
 
-    console.log(`Querying temples collection with district filter: ${district || 'none'}`);
-    const query = district ? { district } : {};
-    console.log('MongoDB query:', JSON.stringify(query));
+    const temples = await db.collection("temples").find().limit(5).toArray();
 
-    const temples = await db.collection("temples").find(query).toArray();
-
-    console.log(`Found ${temples.length} temples for district: ${district || 'all'}`);
+    console.log(`Found ${temples.length} temples`);
     console.log('Sending successful response');
     res.status(200).json(temples);
   } catch (err) {
@@ -76,7 +71,6 @@ export default async function handler(req, res) {
     console.error('Error message:', err.message);
     console.error('Error stack:', err.stack);
     console.error('Error code:', err.code);
-    console.error('Request query district:', district);
     console.error('MONGO_URI exists:', !!process.env.MONGO_URI);
     console.error('MONGODB_URI exists:', !!process.env.MONGODB_URI);
     console.error('===================================================================');

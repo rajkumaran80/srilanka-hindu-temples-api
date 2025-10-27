@@ -1,22 +1,39 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const app = express();
 
 // Load environment variables
 dotenv.config();
 
-// Import the Vercel serverless functions
-const templesHandler = (await import('./api/temples.js')).default;
-const templesFilterHandler = (await import('./api/temples_filter.js')).default;
+const app: express.Application = express();
 
 // Middleware to parse JSON
 app.use(express.json());
 
+// Vercel serverless function types
+interface VercelRequest {
+  method: string;
+  headers: Record<string, string | string[] | undefined>;
+  body: string | null;
+  query: Record<string, string | any>;
+  url: string;
+}
+
+interface VercelResponse {
+  status: (code: number) => {
+    json: (data: any) => void;
+    end: () => void;
+  };
+  json: (data: any) => void;
+}
+
+type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
+
+// Import the Vercel serverless functions
+const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
+const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
+
 // Helper function to convert Express req/res to Vercel format
-function createVercelRequest(req) {
+function createVercelRequest(req: Request): VercelRequest {
   return {
     method: req.method,
     headers: req.headers,
@@ -26,15 +43,15 @@ function createVercelRequest(req) {
   };
 }
 
-function createVercelResponse(res) {
-  return {
-    status: (code) => ({
-      json: (data) => res.status(code).json(data),
+function createVercelResponse(res: Response): VercelResponse {
+  const vercelRes: VercelResponse = {
+    status: (code: number) => ({
+      json: (data: any) => res.status(code).json(data),
       end: () => res.status(code).end(),
     }),
-    json: (data) => res.json(data),
-    status: (code) => res.status(code),
+    json: (data: any) => res.json(data),
   };
+  return vercelRes;
 }
 
 // Routes that mimic Vercel API routes
