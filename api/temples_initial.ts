@@ -29,6 +29,7 @@ interface VercelRequest {
   url: string;
 }
 
+
 // Global variable to cache the MongoDB client for reuse between function calls
 const MONGODB_URI: string = process.env.MONGO_URI || process.env.MONGODB_URI || '';
 const DATABASE: string = process.env.DATABASE || '';
