@@ -10,15 +10,17 @@
     "vercel-dev": "vercel dev"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.0",
     "mongodb": "^6.9.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
     "dotenv": "^16.3.0",
     "nodemon": "^3.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.3.0",
-    "@types/express": "^4.17.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.3.0"
   }
 }

@@ -1,5 +1,7 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import cors from "cors";
+
 
 // Load environment variables
 dotenv.config();
@@ -8,6 +10,20 @@ const app: express.Application = express();
 
 // Middleware to parse JSON
 app.use(express.json());
+
+// CORS configuration
+// Allow origin set via CORS_ORIGIN env var or allow all by default for local development
+const corsOptions: cors.CorsOptions = {
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  // credentials: true, // uncomment if your frontend needs cookies/auth with credentials
+};
+
+// Enable CORS for all routes
+app.use(cors(corsOptions));
+// Enable pre-flight for all routes
+app.options('*', cors(corsOptions));
 
 // Vercel serverless function types
 interface VercelRequest {
@@ -69,13 +85,13 @@ app.get('/api/temples_filter', (req, res) => {
   templesFilterHandler(vercelReq, vercelRes);
 });
 
-app.get('/api/temples_initial', (req, res) => {
+app.get('/api/temples_initial.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
   const vercelRes = createVercelResponse(res);
   templesInitialHandler(vercelReq, vercelRes);
 });
 
-app.get('/api/temples_search', (req, res) => {
+app.get('/api/temples_search.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
   const vercelRes = createVercelResponse(res);
   templesSearchHandler(vercelReq, vercelRes);
@@ -86,7 +102,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sri Lanka Hindu Temples API is running locally' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
   console.log(`🚀 Sri Lanka Hindu Temples API running locally on http://localhost:${PORT}`);

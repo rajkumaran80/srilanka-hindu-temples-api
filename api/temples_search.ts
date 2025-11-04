@@ -38,6 +38,8 @@ interface SearchQuery {
 
 // Global variable to cache the MongoDB client for reuse between function calls
 const MONGODB_URI: string = process.env.MONGO_URI || process.env.MONGODB_URI || '';
+const DATABASE: string = process.env.DATABASE || '';
+
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGO_URI or MONGODB_URI environment variable inside .env or Vercel environment variables');
@@ -66,8 +68,8 @@ async function connectToDatabase() {
   await client.connect();
   console.log('MongoDB connection established');
 
-  const db = client.db("hindu-temples");
-  console.log(`Using database: hindu-temples`);
+  const db = client.db(DATABASE);
+  console.log(`Using database: ${DATABASE}`);
 
   cachedClient = client;
   cachedDb = db;
