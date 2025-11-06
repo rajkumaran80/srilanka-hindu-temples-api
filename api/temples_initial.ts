@@ -23,6 +23,30 @@ interface TempleDocument {
   [key: string]: any;
 }
 
+interface Temple {
+  _id?: string;
+  name?: string;
+  location?: string;
+  district?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+  [key: string]: any;
+}
+
+// Function to convert TempleDocument to Temple
+function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
+  return {
+    _id: doc.id,
+    name: doc.name,
+    location: doc.tags?.name || doc.name,
+    district: undefined, // Can be derived from location or added later
+    latitude: doc.latitude,
+    longitude: doc.longitude,
+    description: `OSM ID: ${doc.osm_id}, Type: ${doc.osm_type}, Source: ${doc.source}`,
+  };
+}
+
 interface StatusResponse {
   json: (data: any) => void;
   end: () => void;
@@ -104,9 +128,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const { db } = await connectToDatabase();
 
     console.log('Querying temples collection with limit 5...');
-    const temples: TempleDocument[] = await db.collection<TempleDocument>("temples").find().limit(5).toArray();
+    const templeDocuments: TempleDocument[] = await db.collection<TempleDocument>("temples").find().limit(5).toArray();
 
-    console.log(`Found ${temples.length} temples`);
+    console.log(`Found ${templeDocuments.length} temple documents`);
+    console.log('Converting to Temple format...');
+    const temples: Temple[] = templeDocuments.map(convertTempleDocumentToTemple);
+
+    console.log(`Converted ${temples.length} temples`);
     console.log('Sending successful response');
     res.status(200).json(temples);
   } catch (err: unknown) {
