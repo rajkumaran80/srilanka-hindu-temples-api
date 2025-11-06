@@ -2,6 +2,28 @@ import { MongoClient, Db } from "mongodb";
 
 // Define interfaces for the API
 interface TempleDocument {
+  id?: string;
+  osm_id?: number;
+  added_at?: {
+    $date: string;
+  };
+  latitude?: number;
+  longitude?: number;
+  name?: string;
+  osm_type?: string;
+  photos?: string[];
+  source?: string;
+  tags?: {
+    amenity?: string;
+    check_date?: string;
+    name?: string;
+    religion?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+interface Temple {
   _id?: string;
   name?: string;
   location?: string;
@@ -10,6 +32,19 @@ interface TempleDocument {
   longitude?: number;
   description?: string;
   [key: string]: any;
+}
+
+// Function to convert TempleDocument to Temple
+function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
+  return {
+    _id: doc.id,
+    name: doc.name,
+    location: doc.tags?.name || doc.name,
+    district: undefined, // Can be derived from location or added later
+    latitude: doc.latitude,
+    longitude: doc.longitude,
+    description: `OSM ID: ${doc.osm_id}, Type: ${doc.osm_type}, Source: ${doc.source}`,
+  };
 }
 
 interface StatusResponse {
@@ -116,24 +151,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     // Query the MongoDB collection with proper sorting and limiting
-    let temples: TempleDocument[] = [];
+    let templeDocuments: TempleDocument[] = [];
 
     if (queryLimit) {
       console.log(`Querying temples collection with geographic query and limit ${queryLimit}...`);
-      temples = await db.collection<TempleDocument>("temples")
+      templeDocuments = await db.collection<TempleDocument>("temples")
         .find(query)
-        .sort({ _id: -1 })
+        .sort({ id: -1 })
         .limit(queryLimit)
         .toArray();
     } else {
       console.log('Querying temples collection with geographic query...');
-      temples = await db.collection<TempleDocument>("temples")
+      templeDocuments = await db.collection<TempleDocument>("temples")
         .find(query)
-        .sort({ _id: -1 })
+        .sort({ id: -1 })
         .toArray();
     }
 
-    console.log(`Found ${temples.length} temples matching search criteria`);
+    console.log(`Found ${templeDocuments.length} temple documents matching search criteria`);
+    console.log('Converting to Temple format...');
+    const temples: Temple[] = templeDocuments.map(convertTempleDocumentToTemple);
+
+    console.log(`Converted ${temples.length} temples`);
     console.log('Sending successful response');
     res.status(200).json(temples);
   } catch (err: unknown) {
