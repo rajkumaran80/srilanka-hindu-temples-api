@@ -1,4 +1,3 @@
-import { DAX } from "aws-sdk";
 import { MongoClient, Db } from "mongodb";
 
 // Define interfaces for the API
