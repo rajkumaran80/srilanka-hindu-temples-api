@@ -2,11 +2,24 @@ import { MongoClient, Db } from "mongodb";
 
 // Define interfaces for the API
 interface TempleDocument {
-  _id?: string;
+  id?: string;
+  osm_id?: number;
+  added_at?: {
+    $date: string;
+  };
+  latitude?: number;
+  longitude?: number;
   name?: string;
-  location?: string;
-  district?: string;
-  description?: string;
+  osm_type?: string;
+  photos?: string[];
+  source?: string;
+  tags?: {
+    amenity?: string;
+    check_date?: string;
+    name?: string;
+    religion?: string;
+    [key: string]: any;
+  };
   [key: string]: any;
 }
 
@@ -31,8 +44,8 @@ interface VercelRequest {
 
 
 // Global variable to cache the MongoDB client for reuse between function calls
-const MONGODB_URI: string = process.env.MONGO_URI || process.env.MONGODB_URI || '';
-const DATABASE: string = process.env.DATABASE || '';
+const MONGODB_URI: string = process.env.MONGODB_URI!;
+const DATABASE: string = process.env.DATABASE!;
 
 
 if (!MONGODB_URI) {
