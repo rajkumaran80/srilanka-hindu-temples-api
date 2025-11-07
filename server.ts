@@ -49,6 +49,7 @@ const templesHandler: VercelHandler = (await import('./api/temples.js')).default
 const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
 const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.js')).default;
 const templesSearchHandler: VercelHandler = (await import('./api/temples_search.js')).default;
+const templesSearchByNameHandler: VercelHandler = (await import('./api/temples_search_by_name.js')).default;
 
 // Helper function to convert Express req/res to Vercel format
 function createVercelRequest(req: Request): VercelRequest {
@@ -97,6 +98,12 @@ app.get('/api/temples_search.ts', (req, res) => {
   templesSearchHandler(vercelReq, vercelRes);
 });
 
+app.get('/api/temples_search_by_name', (req, res) => {
+  const vercelReq = createVercelRequest(req);
+  const vercelRes = createVercelResponse(res);
+  templesSearchByNameHandler(vercelReq, vercelRes);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sri Lanka Hindu Temples API is running locally' });
@@ -111,5 +118,6 @@ app.listen(PORT, () => {
   console.log(`   GET /api/temples_filter?district=<district> - Filter temples by district`);
   console.log(`   GET /api/temples_initial - Get first 5 temples`);
   console.log(`   GET /api/temples_search?north=&south=&east=&west=&limit= - Search by geographic bounds`);
+  console.log(`   GET /api/temples_search_by_name?name=<name> - Search temples by name`);
   console.log(`   GET /health - Health check`);
 });
