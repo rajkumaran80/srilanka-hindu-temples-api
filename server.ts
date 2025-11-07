@@ -98,7 +98,7 @@ app.get('/api/temples_search.ts', (req, res) => {
   templesSearchHandler(vercelReq, vercelRes);
 });
 
-app.get('/api/temples_search_by_name', (req, res) => {
+app.get('/api/temples_search_by_name.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
   const vercelRes = createVercelResponse(res);
   templesSearchByNameHandler(vercelReq, vercelRes);
