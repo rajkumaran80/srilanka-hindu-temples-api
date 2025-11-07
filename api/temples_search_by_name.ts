@@ -14,6 +14,7 @@ interface TempleDocument {
   longitude?: number;
   name?: string;
   temple_name?: string;
+  location?: string;
   osm_type?: string;
   photos?: string[];
   source?: string;
@@ -60,7 +61,7 @@ function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
     id: id,
     osm_id: doc.osm_id,
     name: doc.temple_name || doc.name,
-    location: doc.tags?.name || doc.name,
+    location: doc.location || doc.tags?.name || doc.name,
     district: undefined, // Can be derived from location or added later
     latitude: doc.latitude,
     longitude: doc.longitude,
