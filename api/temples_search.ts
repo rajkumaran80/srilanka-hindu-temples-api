@@ -28,6 +28,8 @@ interface TempleDocument {
 
 interface Temple {
   _id?: string;
+  id?: string;
+  osm_id?: number;
   name?: string;
   location?: string;
   district?: string;
@@ -49,8 +51,11 @@ function extractId(doc: TempleDocument): string | undefined {
 
 // Function to convert TempleDocument to Temple
 function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
+  const id = extractId(doc);
   return {
-    _id: extractId(doc),
+    _id: id,
+    id: id,
+    osm_id: doc.osm_id,
     name: doc.name,
     location: doc.tags?.name || doc.name,
     district: undefined, // Can be derived from location or added later
