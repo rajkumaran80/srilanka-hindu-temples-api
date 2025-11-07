@@ -35,6 +35,7 @@ interface Temple {
   district?: string;
   latitude?: number;
   longitude?: number;
+  photos?: string[];
   description?: string;
   [key: string]: any;
 }
@@ -62,6 +63,7 @@ function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
     district: undefined, // Can be derived from location or added later
     latitude: doc.latitude,
     longitude: doc.longitude,
+    photos: doc.photos,
     description: `OSM ID: ${doc.osm_id}, Type: ${doc.osm_type}, Source: ${doc.source}`,
   };
 }
@@ -146,8 +148,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     console.log('Connecting to database...');
     const { db } = await connectToDatabase();
 
-    console.log('Querying temples collection with limit 5...');
-    const templeDocuments: TempleDocument[] = await db.collection<TempleDocument>("temples").find().limit(5).toArray();
+    console.log('Querying temples collection with level 1 filter...');
+    const templeDocuments: TempleDocument[] = await db.collection<TempleDocument>("temples").find({ level: 1 }).toArray();
 
     console.log(`Found ${templeDocuments.length} temple documents`);
     console.log('Converting to Temple format...');
