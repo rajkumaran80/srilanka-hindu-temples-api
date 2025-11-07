@@ -2,6 +2,9 @@ import { MongoClient, Db } from "mongodb";
 
 // Define interfaces for the API
 interface TempleDocument {
+  _id?: {
+    $oid: string;
+  };
   id?: string;
   osm_id?: number;
   added_at?: {
@@ -34,10 +37,20 @@ interface Temple {
   [key: string]: any;
 }
 
+// Helper function to extract ID from MongoDB document
+function extractId(doc: TempleDocument): string | undefined {
+  if (doc.id) return doc.id;
+  if (doc._id) {
+    if (typeof doc._id === 'string') return doc._id;
+    if (doc._id.$oid) return doc._id.$oid;
+  }
+  return undefined;
+}
+
 // Function to convert TempleDocument to Temple
 function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
   return {
-    _id: doc.id,
+    _id: extractId(doc),
     name: doc.name,
     location: doc.tags?.name || doc.name,
     district: undefined, // Can be derived from location or added later
