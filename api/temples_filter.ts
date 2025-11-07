@@ -40,13 +40,14 @@ interface Temple {
 }
 
 // Helper function to extract ID from MongoDB document
-function extractId(doc: TempleDocument): string | undefined {
+function extractId(doc: TempleDocument): string {
   if (doc.id) return doc.id;
   if (doc._id) {
     if (typeof doc._id === 'string') return doc._id;
     if (doc._id.$oid) return doc._id.$oid;
   }
-  return undefined;
+  // Fallback to osm_id as string if no other ID is available
+  return doc.osm_id?.toString() || 'unknown';
 }
 
 // Function to convert TempleDocument to Temple
