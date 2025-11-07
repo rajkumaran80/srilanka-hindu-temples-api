@@ -4,7 +4,7 @@
   "description": "Vercel Node.js serverless API for Hindu temples",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/server.js",
     "vercel-dev": "vercel dev"
