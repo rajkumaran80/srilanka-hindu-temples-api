@@ -2,9 +2,9 @@ import { MongoClient, Db } from "mongodb";
 
 // Define interfaces for the API
 interface CommentData {
-  temple_id: string;
-  user_name?: string;
-  user_email?: string;
+  templeId: string;
+  userName?: string;
+  userEmail?: string;
   comment: string;
   rating?: number;
   created_at?: Date;
@@ -127,12 +127,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'Invalid JSON in request body' });
     }
 
-    const { temple_id, user_name, user_email, comment, rating } = requestBody;
+    const { templeId, userName, userEmail, comment, rating } = requestBody;
 
     // Validate required fields
-    if (!temple_id) {
-      console.log('Missing temple_id');
-      return res.status(400).json({ error: 'temple_id is required' });
+    if (!templeId) {
+      console.log('Missing templeId');
+      return res.status(400).json({ error: 'templeId is required' });
     }
 
     if (!comment || comment.trim() === '') {
@@ -146,22 +146,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'rating must be between 1 and 5' });
     }
 
-    console.log(`Adding comment for temple: ${temple_id}`);
+    console.log(`Adding comment for temple: ${templeId}`);
 
     // Create comment object
     const newComment: CommentData = {
-      temple_id,
+      templeId,
       comment: comment.trim(),
       created_at: new Date(),
     };
 
     // Add optional fields
-    if (user_name && user_name.trim() !== '') {
-      newComment.user_name = user_name.trim();
+    if (userName && userName.trim() !== '') {
+      newComment.userName = userName.trim();
     }
 
-    if (user_email && user_email.trim() !== '') {
-      newComment.user_email = user_email.trim();
+    if (userEmail && userEmail.trim() !== '') {
+      newComment.userEmail = userEmail.trim();
     }
 
     if (rating !== undefined) {
@@ -172,8 +172,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const updateResult = await (db.collection("temples") as any).updateOne(
       {
         $or: [
-          { id: temple_id },
-          { osm_id: isNaN(parseInt(temple_id)) ? undefined : parseInt(temple_id) }
+          { id: templeId },
+          { osm_id: isNaN(parseInt(templeId)) ? undefined : parseInt(templeId) }
         ].filter(condition => condition !== undefined)
       },
       {
@@ -183,16 +183,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     );
 
     if (updateResult.matchedCount === 0) {
-      console.log(`Temple not found: ${temple_id}`);
+      console.log(`Temple not found: ${templeId}`);
       return res.status(404).json({ error: 'Temple not found' });
     }
 
     if (updateResult.modifiedCount === 0) {
-      console.log(`Failed to add comment for temple: ${temple_id}`);
+      console.log(`Failed to add comment for temple: ${templeId}`);
       return res.status(500).json({ error: 'Failed to add comment' });
     }
 
-    console.log(`Comment added successfully for temple: ${temple_id}`);
+    console.log(`Comment added successfully for temple: ${templeId}`);
     console.log('Sending successful response');
     res.status(201).json({
       success: true,
