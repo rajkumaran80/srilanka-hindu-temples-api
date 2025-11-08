@@ -52,6 +52,7 @@ const templesSearchHandler: VercelHandler = (await import('./api/temples_search.
 const templesSearchByNameHandler: VercelHandler = (await import('./api/temples_search_by_name.js')).default;
 const addTempleCommentHandler: VercelHandler = (await import('./api/add_temple_comment.js')).default;
 const addSuggestedTempleNameHandler: VercelHandler = (await import('./api/add_suggested_temple_name.js')).default;
+const uploadTemplePhotoHandler: VercelHandler = (await import('./api/upload_temple_photo.js')).default;
 
 // Helper function to convert Express req/res to Vercel format
 function createVercelRequest(req: Request): VercelRequest {
@@ -118,6 +119,12 @@ app.post('/api/add_suggested_temple_name', (req, res) => {
   addSuggestedTempleNameHandler(vercelReq, vercelRes);
 });
 
+app.post('/api/upload_temple_photo', (req, res) => {
+  const vercelReq = createVercelRequest(req);
+  const vercelRes = createVercelResponse(res);
+  uploadTemplePhotoHandler(vercelReq, vercelRes);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sri Lanka Hindu Temples API is running locally' });
@@ -135,5 +142,6 @@ app.listen(PORT, () => {
   console.log(`   GET /api/temples_search_by_name?name=<name> - Search temples by name`);
   console.log(`   POST /api/add_temple_comment - Add comment to temple`);
   console.log(`   POST /api/add_suggested_temple_name - Add suggested name to temple`);
+  console.log(`   POST /api/upload_temple_photo - Upload temple photos`);
   console.log(`   GET /health - Health check`);
 });
