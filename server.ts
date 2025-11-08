@@ -45,8 +45,6 @@ interface VercelResponse {
 type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
 
 // Import the Vercel serverless functions
-const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
-const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
 const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.js')).default;
 const templesSearchHandler: VercelHandler = (await import('./api/temples_search.js')).default;
 const templesSearchByNameHandler: VercelHandler = (await import('./api/temples_search_by_name.js')).default;
@@ -107,19 +105,19 @@ app.get('/api/temples_search_by_name.ts', (req, res) => {
   templesSearchByNameHandler(vercelReq, vercelRes);
 });
 
-app.post('/api/add_temple_comment', (req, res) => {
+app.post('/api/add_temple_comment.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
   const vercelRes = createVercelResponse(res);
   addTempleCommentHandler(vercelReq, vercelRes);
 });
 
-app.post('/api/add_suggested_temple_name', (req, res) => {
+app.post('/api/add_suggested_temple_name.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
   const vercelRes = createVercelResponse(res);
   addSuggestedTempleNameHandler(vercelReq, vercelRes);
 });
 
-app.post('/api/upload_temple_photo', (req, res) => {
+app.post('/api/upload_temple_photo.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
   const vercelRes = createVercelResponse(res);
   uploadTemplePhotoHandler(vercelReq, vercelRes);

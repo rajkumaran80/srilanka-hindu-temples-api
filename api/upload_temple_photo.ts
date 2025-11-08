@@ -211,7 +211,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'Invalid request format. Expected JSON with templeId and photo data.' });
     }
 
-    const { templeId, photos } = requestBody;
+    const { templeId, photo } = requestBody;
 
     // Validate required fields
     if (!templeId) {
@@ -219,17 +219,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'templeId is required' });
     }
 
-    if (!photos || !Array.isArray(photos) || photos.length === 0) {
-      console.log('Missing or invalid photos');
-      return res.status(400).json({ error: 'photos array is required and cannot be empty' });
+    if (!photo || !photo.data || !photo.filename) {
+      console.log('Missing or invalid photo data');
+      return res.status(400).json({ error: 'photo object with data and filename is required' });
     }
 
-    if (photos.length > MAX_PHOTOS_PER_TEMPLE) {
-      console.log(`Too many photos: ${photos.length}, max allowed: ${MAX_PHOTOS_PER_TEMPLE}`);
-      return res.status(400).json({ error: `Maximum ${MAX_PHOTOS_PER_TEMPLE} photos allowed per temple` });
-    }
-
-    console.log(`Processing ${photos.length} photos for temple: ${templeId}`);
+    console.log(`Processing 1 photo for temple: ${templeId}`);
 
     // Find the temple
     const temple = await db.collection<TempleDocument>("temples").findOne({
@@ -250,8 +245,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     // Check current unapproved photos count
     const currentUnapprovedCount = temple.unapproved_photos ? temple.unapproved_photos.length : 0;
-    if (currentUnapprovedCount + photos.length > MAX_PHOTOS_PER_TEMPLE) {
-      console.log(`Would exceed max photos. Current: ${currentUnapprovedCount}, Adding: ${photos.length}, Max: ${MAX_PHOTOS_PER_TEMPLE}`);
+    if (currentUnapprovedCount >= MAX_PHOTOS_PER_TEMPLE) {
+      console.log(`Temple already has max photos. Current: ${currentUnapprovedCount}, Max: ${MAX_PHOTOS_PER_TEMPLE}`);
       return res.status(400).json({
         error: `Temple already has ${currentUnapprovedCount} unapproved photos. Maximum ${MAX_PHOTOS_PER_TEMPLE} photos allowed.`
       });
@@ -260,51 +255,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const uploadedFiles: string[] = [];
     const failedUploads: string[] = [];
 
-    // Process each photo
-    for (let i = 0; i < photos.length; i++) {
-      const photo = photos[i];
-
-      if (!photo.data || !photo.filename) {
-        console.log(`Invalid photo data for photo ${i + 1}`);
-        failedUploads.push(`photo_${i + 1}: invalid data`);
-        continue;
+    // Process the single photo
+    try {
+      // Convert base64 to buffer if needed
+      let fileBuffer: Buffer;
+      if (typeof photo.data === 'string' && photo.data.startsWith('data:')) {
+        // Handle base64 data URL
+        const base64Data = photo.data.split(',')[1];
+        fileBuffer = Buffer.from(base64Data, 'base64');
+      } else if (typeof photo.data === 'string') {
+        // Assume base64
+        fileBuffer = Buffer.from(photo.data, 'base64');
+      } else {
+        // Assume it's already a buffer
+        fileBuffer = Buffer.from(photo.data);
       }
 
-      try {
-        // Convert base64 to buffer if needed
-        let fileBuffer: Buffer;
-        if (typeof photo.data === 'string' && photo.data.startsWith('data:')) {
-          // Handle base64 data URL
-          const base64Data = photo.data.split(',')[1];
-          fileBuffer = Buffer.from(base64Data, 'base64');
-        } else if (typeof photo.data === 'string') {
-          // Assume base64
-          fileBuffer = Buffer.from(photo.data, 'base64');
-        } else {
-          // Assume it's already a buffer
-          fileBuffer = Buffer.from(photo.data);
-        }
+      // Generate filename: templeName_001.jpg, templeName_002.jpg, etc.
+      const fileExt = photo.filename.split('.').pop() || 'jpg';
+      const sequenceNumber = String(currentUnapprovedCount + 1).padStart(3, '0');
+      const fileName = `${sanitizedTempleName}_${sequenceNumber}.${fileExt}`;
 
-        // Generate filename: templeName_001.jpg, templeName_002.jpg, etc.
-        const fileExt = photo.filename.split('.').pop() || 'jpg';
-        const sequenceNumber = String(currentUnapprovedCount + uploadedFiles.length + 1).padStart(3, '0');
-        const fileName = `${sanitizedTempleName}_${sequenceNumber}.${fileExt}`;
+      // Upload to GitHub
+      const uploadSuccess = await uploadToGitHub(fileBuffer, fileName, sanitizedTempleName);
 
-        // Upload to GitHub
-        const uploadSuccess = await uploadToGitHub(fileBuffer, fileName, sanitizedTempleName);
-
-        if (uploadSuccess) {
-          uploadedFiles.push(fileName);
-          console.log(`Uploaded photo ${i + 1}: ${fileName}`);
-        } else {
-          failedUploads.push(`photo_${i + 1}: upload failed`);
-          console.log(`Failed to upload photo ${i + 1}: ${fileName}`);
-        }
-
-      } catch (error) {
-        console.error(`Error processing photo ${i + 1}:`, error);
-        failedUploads.push(`photo_${i + 1}: processing error`);
+      if (uploadSuccess) {
+        uploadedFiles.push(fileName);
+        console.log(`Uploaded photo: ${fileName}`);
+      } else {
+        failedUploads.push('photo: upload failed');
+        console.log(`Failed to upload photo: ${fileName}`);
       }
+
+    } catch (error) {
+      console.error('Error processing photo:', error);
+      failedUploads.push('photo: processing error');
     }
 
     if (uploadedFiles.length === 0) {
