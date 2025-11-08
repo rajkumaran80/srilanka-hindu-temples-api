@@ -86,6 +86,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   console.log('Request method:', req.method);
   console.log('Request URL:', req.url);
 
+  // Set CORS headers for Vercel deployment
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
+    return res.status(200).json({});
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     console.log('Method not allowed:', req.method);
