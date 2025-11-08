@@ -3,10 +3,7 @@ import { MongoClient, Db } from "mongodb";
 // Define interfaces for the API
 interface CommentData {
   templeId: string;
-  userName?: string;
-  userEmail?: string;
   comment: string;
-  rating?: number;
   created_at?: Date;
 }
 
@@ -127,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'Invalid JSON in request body' });
     }
 
-    const { templeId, userName, userEmail, comment, rating } = requestBody;
+    const { templeId, comment } = requestBody;
 
     // Validate required fields
     if (!templeId) {
@@ -140,12 +137,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'comment is required and cannot be empty' });
     }
 
-    // Validate rating if provided
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
-      console.log('Invalid rating:', rating);
-      return res.status(400).json({ error: 'rating must be between 1 and 5' });
-    }
-
     console.log(`Adding comment for temple: ${templeId}`);
 
     // Create comment object
@@ -154,19 +145,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       comment: comment.trim(),
       created_at: new Date(),
     };
-
-    // Add optional fields
-    if (userName && userName.trim() !== '') {
-      newComment.userName = userName.trim();
-    }
-
-    if (userEmail && userEmail.trim() !== '') {
-      newComment.userEmail = userEmail.trim();
-    }
-
-    if (rating !== undefined) {
-      newComment.rating = rating;
-    }
 
     // Add comment to temple document
     const updateResult = await (db.collection("temples") as any).updateOne(
