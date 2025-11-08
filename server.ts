@@ -45,11 +45,12 @@ interface VercelResponse {
 type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
 
 // Import the Vercel serverless functions
-// const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
-// const templesFilterHandler: VercelHandler = (await import('JP65+XM4JP65+XM4JP65+XM4vJP65+XM4./api/temples_filter.js')).default;
+const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
+const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
 const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.js')).default;
 const templesSearchHandler: VercelHandler = (await import('./api/temples_search.js')).default;
 const templesSearchByNameHandler: VercelHandler = (await import('./api/temples_search_by_name.js')).default;
+const addTempleCommentHandler: VercelHandler = (await import('./api/add_temple_comment.js')).default;
 
 // Helper function to convert Express req/res to Vercel format
 function createVercelRequest(req: Request): VercelRequest {
@@ -104,6 +105,12 @@ app.get('/api/temples_search_by_name.ts', (req, res) => {
   templesSearchByNameHandler(vercelReq, vercelRes);
 });
 
+app.post('/api/add_temple_comment', (req, res) => {
+  const vercelReq = createVercelRequest(req);
+  const vercelRes = createVercelResponse(res);
+  addTempleCommentHandler(vercelReq, vercelRes);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sri Lanka Hindu Temples API is running locally' });
@@ -119,5 +126,6 @@ app.listen(PORT, () => {
   console.log(`   GET /api/temples_initial - Get first 5 temples`);
   console.log(`   GET /api/temples_search?north=&south=&east=&west=&limit= - Search by geographic bounds`);
   console.log(`   GET /api/temples_search_by_name?name=<name> - Search temples by name`);
+  console.log(`   POST /api/add_temple_comment - Add comment to temple`);
   console.log(`   GET /health - Health check`);
 });
