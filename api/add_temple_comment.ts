@@ -32,7 +32,7 @@ interface VercelResponse {
 interface VercelRequest {
   method: string;
   headers: Record<string, string | string[] | undefined>;
-  body: string | null;
+  body: string | any;
   query: Record<string, string | any>;
   url: string;
 }
@@ -115,10 +115,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     console.log('Connecting to database...');
     const { db } = await connectToDatabase();
 
-    // Parse request body
-    let requestBody: CommentData;
+    // Parse request body - handle both string and object formats
+    let requestBody: any;
     try {
-      requestBody = req.body ? JSON.parse(req.body) : {};
+      if (typeof req.body === 'string') {
+        requestBody = req.body ? JSON.parse(req.body) : {};
+      } else {
+        requestBody = req.body || {};
+      }
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return res.status(400).json({ error: 'Invalid JSON in request body' });
