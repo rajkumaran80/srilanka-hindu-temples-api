@@ -53,6 +53,38 @@ function extractId(doc: TempleDocument): string {
   return doc.osm_id?.toString() || 'unknown';
 }
 
+// Helper function to build location string from address components
+function buildLocationString(doc: TempleDocument): string {
+  const components: string[] = [];
+
+  // Add suburb if available
+  if (doc.tags?.suburb) {
+    components.push(doc.tags.suburb);
+  }
+
+  // Add village if available
+  if (doc.tags?.village) {
+    components.push(doc.tags.village);
+  }
+
+  // Add district if available
+  if (doc.tags?.district) {
+    components.push(doc.tags.district);
+  }
+
+  // Add city if available and no other components
+  if (components.length === 0 && doc.tags?.['addr:city']) {
+    components.push(doc.tags['addr:city']);
+  }
+
+  // If no address components found, use the location field or fallback
+  if (components.length === 0) {
+    return doc.location || doc.tags?.name || doc.name || 'Unknown Location';
+  }
+
+  return components.join(', ');
+}
+
 // Function to convert TempleDocument to Temple
 function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
   const id = extractId(doc);
@@ -61,7 +93,7 @@ function convertTempleDocumentToTemple(doc: TempleDocument): Temple {
     id: id,
     osm_id: doc.osm_id,
     name: doc.temple_name || doc.name,
-    location: doc.location || doc.tags?.name || doc.name,
+    location: buildLocationString(doc),
     district: undefined, // Can be derived from location or added later
     latitude: doc.latitude,
     longitude: doc.longitude,

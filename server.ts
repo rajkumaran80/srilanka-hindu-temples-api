@@ -45,8 +45,8 @@ interface VercelResponse {
 type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
 
 // Import the Vercel serverless functions
-const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
-const templesFilterHandler: VercelHandler = (await import('./api/temples_filter.js')).default;
+// const templesHandler: VercelHandler = (await import('./api/temples.js')).default;
+// const templesFilterHandler: VercelHandler = (await import('JP65+XM4JP65+XM4JP65+XM4vJP65+XM4./api/temples_filter.js')).default;
 const templesInitialHandler: VercelHandler = (await import('./api/temples_initial.js')).default;
 const templesSearchHandler: VercelHandler = (await import('./api/temples_search.js')).default;
 const templesSearchByNameHandler: VercelHandler = (await import('./api/temples_search_by_name.js')).default;
@@ -74,17 +74,17 @@ function createVercelResponse(res: Response): VercelResponse {
 }
 
 // Routes that mimic Vercel API routes
-app.get('/api/temples', (req, res) => {
-  const vercelReq = createVercelRequest(req);
-  const vercelRes = createVercelResponse(res);
-  templesHandler(vercelReq, vercelRes);
-});
+// app.get('/api/temples', (req, res) => {
+//   const vercelReq = createVercelRequest(req);
+//   const vercelRes = createVercelResponse(res);
+//   templesHandler(vercelReq, vercelRes);
+// });
 
-app.get('/api/temples_filter', (req, res) => {
-  const vercelReq = createVercelRequest(req);
-  const vercelRes = createVercelResponse(res);
-  templesFilterHandler(vercelReq, vercelRes);
-});
+// app.get('/api/temples_filter', (req, res) => {
+//   const vercelReq = createVercelRequest(req);
+//   const vercelRes = createVercelResponse(res);
+//   templesFilterHandler(vercelReq, vercelRes);
+// });
 
 app.get('/api/temples_initial.ts', (req, res) => {
   const vercelReq = createVercelRequest(req);
