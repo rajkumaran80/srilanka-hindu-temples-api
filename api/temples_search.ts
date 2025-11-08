@@ -58,18 +58,18 @@ function buildLocationString(doc: TempleDocument): string {
   const components: string[] = [];
 
   // Add suburb if available
-  if (doc.tags?.suburb) {
-    components.push(doc.tags.suburb);
+  if (doc.suburb) {
+    components.push(doc.suburb);
   }
 
   // Add village if available
-  if (doc.tags?.village) {
-    components.push(doc.tags.village);
+  if (doc.village) {
+    components.push(doc.village);
   }
 
   // Add district if available
-  if (doc.tags?.district) {
-    components.push(doc.tags.district);
+  if (doc.district) {
+    components.push(doc.district);
   }
 
   // Add city if available and no other components
