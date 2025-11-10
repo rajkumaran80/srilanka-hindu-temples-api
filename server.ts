@@ -40,6 +40,7 @@ interface VercelResponse {
     end: () => void;
   };
   json: (data: any) => void;
+  setHeader: (name: string, value: string) => void;
 }
 
 type VercelHandler = (req: VercelRequest, res: VercelResponse) => Promise<void> | void;
@@ -70,6 +71,7 @@ function createVercelResponse(res: Response): VercelResponse {
       end: () => res.status(code).end(),
     }),
     json: (data: any) => res.json(data),
+    setHeader: (name: string, value: string) => res.setHeader(name, value),
   };
   return vercelRes;
 }
