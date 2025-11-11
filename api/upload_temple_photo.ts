@@ -1,37 +1,19 @@
 // api/upload-photo.ts
 // Vercel Serverless handler (TypeScript)
-// Deploy this to /api/upload-photo on Vercel
-//
-// Request JSON:
-// { "templeId": "string", "photo": "data:<mime>;base64,<data>" | "<base64>", "filename?" }
-//
-// Response JSON:
-// { ok: true, url: "<cdn url>", path: "<repo path>" } on success
-// { ok: false, error: "message" } on error
-//
-// Env required:
-// - GITHUB_TOKEN
-// - GITHUB_OWNER (default 'rajkumaran80')
-// - GITHUB_REPO (default 'srilanka-hindu-temples-photos')
-// - GITHUB_BRANCH (default 'main')
-// - GITHUB_IMAGES_DIR (default 'temple_photos')
-// - CDN_BASE (default computed from owner/repo/branch)
-// - MAX_PHOTOS_PER_TEMPLE (default 5)
+// Uploads photo into repo under temple folder named from DB (templename slug)
 
-// Removed external dependencies to match project structure
+import { MongoClient, ObjectId } from 'mongodb';
 
 interface StatusResponse {
   json: (data: any) => void;
   end: () => void;
 }
-
 interface VercelResponse {
   status: (code: number) => StatusResponse;
   json: (data: any) => void;
   headersSent?: boolean;
   setHeader: (name: string, value: string) => void;
 }
-
 interface VercelRequest {
   method: string;
   headers: Record<string, string | string[] | undefined>;
@@ -50,11 +32,29 @@ const CDN_BASE =
   `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}/`;
 const MAX_PHOTOS_PER_TEMPLE = parseInt(process.env.MAX_PHOTOS_PER_TEMPLE || '5', 10);
 
+const MONGODB_URI = process.env.MONGODB_URI || '';
+const MONGODB_DB = process.env.MONGODB_DB || 'temples';
+const MONGODB_COLLECTION = process.env.MONGODB_COLLECTION || 'temples';
+
 const USER_AGENT = 'TemplePhotoUploader/1.0 (vercel)';
 
-if (!GITHUB_TOKEN) {
-  // When running locally this will throw at import time; Vercel will have env set.
-  // But to be safe, we still allow import; we'll error at runtime if missing.
+// canonical repo name: owner/repo
+const REPO_FULL = ((): string => {
+  if (!GITHUB_REPO) throw new Error('GITHUB_REPO env missing');
+  if (GITHUB_REPO.includes('/')) return GITHUB_REPO;
+  if (!GITHUB_OWNER) throw new Error('GITHUB_OWNER env missing while GITHUB_REPO lacks owner');
+  return `${GITHUB_OWNER}/${GITHUB_REPO}`;
+})();
+
+// --- Mongo client reuse (recommended for serverless)
+let cachedClient: MongoClient | null = null;
+async function getMongoClient(): Promise<MongoClient> {
+  if (!MONGODB_URI) throw new Error('MONGODB_URI env missing');
+  if (cachedClient) return cachedClient;
+  const c = new MongoClient(MONGODB_URI);
+  await c.connect();
+  cachedClient = c;
+  return c;
 }
 
 function slugify(name: string) {
@@ -65,18 +65,22 @@ function slugify(name: string) {
     .replace(/^_+|_+$/g, '');
 }
 
-function uniqueFileName(base: string, ext = 'jpg') {
+function uniqueFileName(ext = 'jpg') {
   const ts = Date.now();
   const rand = Math.random().toString(36).slice(2, 8);
-  return `${base}-${ts}-${rand}.${ext}`;
+  return `${ts}-${rand}.${ext}`;
 }
 
 async function githubListFolder(path: string) {
-  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodeURIComponent(
-    path
-  )}?ref=${encodeURIComponent(GITHUB_BRANCH)}`;
+  const url = `https://api.github.com/repos/${REPO_FULL}/contents/${path}?ref=${encodeURIComponent(
+    GITHUB_BRANCH
+  )}`;
   const res = await fetch(url, {
-    headers: { Authorization: `token ${GITHUB_TOKEN}`, 'User-Agent': USER_AGENT },
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      'User-Agent': USER_AGENT,
+      Accept: 'application/vnd.github.v3+json',
+    },
   });
   if (res.status === 404) return null;
   if (!res.ok) {
@@ -87,75 +91,93 @@ async function githubListFolder(path: string) {
 }
 
 async function githubUploadFile(path: string, contentBase64: string, message = 'Add temple photo') {
-  const api = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodeURIComponent(
-    path
-  )}`;
+  const api = `https://api.github.com/repos/${REPO_FULL}/contents/${path}`;
   const payload: any = {
-    message,
+    message: typeof message === 'string' ? message : String(message),
     content: contentBase64,
     branch: GITHUB_BRANCH,
   };
 
-  // Try create/update in one step (PUT). If conflict/422, attempt to fetch sha and retry.
+  // Primary attempt: create/update in one PUT
   let res = await fetch(api, {
     method: 'PUT',
     headers: {
-      Authorization: `token ${GITHUB_TOKEN}`,
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
       'User-Agent': USER_AGENT,
+      Accept: 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   });
 
+  const bodyText = await res.text().catch(() => '');
+
   if (res.ok) {
-    const j = await res.json();
-    return j.content?.path;
+    try {
+      const j = JSON.parse(bodyText);
+      return j.content?.path;
+    } catch (e) {
+      return null;
+    }
   }
 
-  // handle possible conflict/update
-  if (res.status === 422 || res.status === 409) {
-    const getRes = await fetch(api + `?ref=${encodeURIComponent(GITHUB_BRANCH)}`, {
-      headers: { Authorization: `token ${GITHUB_TOKEN}`, 'User-Agent': USER_AGENT },
+  // If we got conflict or need to update with sha, try GET -> PUT with sha
+  if (res.status === 422 || res.status === 409 || res.status === 404) {
+    const getRes = await fetch(`${api}?ref=${encodeURIComponent(GITHUB_BRANCH)}`, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        'User-Agent': USER_AGENT,
+        Accept: 'application/vnd.github.v3+json',
+      },
     });
     if (getRes.ok) {
-      const body = await getRes.json();
-      const sha = body.sha;
+      const getJson = await getRes.json();
+      const sha = getJson.sha;
       payload.sha = sha;
-      const upd = await fetch(api, {
+      const updRes = await fetch(api, {
         method: 'PUT',
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
           'User-Agent': USER_AGENT,
+          Accept: 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
-      if (!upd.ok) {
-        const t = await upd.text().catch(() => '');
-        throw new Error(`GitHub update failed: ${upd.status} ${t}`);
+      const updText = await updRes.text().catch(() => '');
+      if (!updRes.ok) {
+        throw new Error(`GitHub update failed: ${updRes.status} ${updText}`);
       }
-      const j2 = await upd.json();
-      return j2.content?.path;
+      return JSON.parse(updText).content?.path;
     }
   }
 
-  const txt = await res.text().catch(() => '');
-  throw new Error(`GitHub upload failed: ${res.status} ${txt}`);
+  throw new Error(`GitHub upload failed: ${res.status} ${bodyText}`);
 }
 
 function extractBase64AndMime(input: string) {
-  // Accept either data:<mime>;base64,<data> OR plain base64
   const dataUrlMatch = input.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/);
   if (dataUrlMatch) {
     return { mime: dataUrlMatch[1], base64: dataUrlMatch[2] };
   }
-  // assume plain base64; we cannot detect mime reliably — default to jpeg
-  // Basic sanity check (short)
   const sample = input.slice(0, 80);
   if (!/^[A-Za-z0-9+/=\r\n]+$/.test(sample)) {
     throw new Error('photo must be a base64 string or data URL');
   }
   return { mime: 'image/jpeg', base64: input.replace(/\r?\n/g, '') };
+}
+
+function parsePossibleObjectId(id: string) {
+  // If looks like ObjectId hex (24 hex chars), return ObjectId, else return original string
+  if (!id) return id;
+  if (/^[a-fA-F0-9]{24}$/.test(id)) {
+    try {
+      return new ObjectId(id);
+    } catch {
+      return id;
+    }
+  }
+  return id;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -171,25 +193,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    const body = req.body ?? {};
-    const templeId = body.templeId || body.temple_id || body.temple; // accept some variants
-    const photoRaw = body.photo;
-    const filenameProvided = body.filename || body.name;
+    if (!MONGODB_URI) {
+      res.status(500).json({ ok: false, error: 'Server misconfigured: MONGODB_URI missing' });
+      return;
+    }
+
+    // Parse request body - handle both string and object formats
+    let requestBody: any;
+    try {
+      if (typeof req.body === 'string') {
+        requestBody = req.body ? JSON.parse(req.body) : {};
+      } else {
+        requestBody = req.body || {};
+      }
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      res.status(400).json({ ok: false, error: 'Invalid JSON in request body' });
+      return;
+    }
+
+    const { templeId, photo } = requestBody;
 
     if (!templeId) {
       res.status(400).json({ ok: false, error: 'templeId is required' });
       return;
     }
-    if (!photoRaw) {
-      res.status(400).json({ ok: false, error: 'photo (base64 or data URL) is required' });
+    if (!photo || (typeof photo === 'string' && photo.trim() === '')) {
+      res.status(400).json({ ok: false, error: 'photo is required and cannot be empty' });
       return;
     }
+
+    // connect to mongo and fetch temple by id
+    const client = await getMongoClient();
+    const collection = client.db(MONGODB_DB).collection(MONGODB_COLLECTION);
+
+    const queryId = parsePossibleObjectId(String(templeId));
+    let templeDoc;
+    if (queryId instanceof ObjectId) {
+      templeDoc = await collection.findOne({ _id: queryId });
+    } else {
+      templeDoc = await collection.findOne({
+        $or: [{ osm_id: Number(templeId) }, { 'tags.name': String(templeId) }],
+      });
+    }
+
+    if (!templeDoc) {
+      res.status(404).json({ ok: false, error: 'Temple not found in DB for provided templeId' });
+      return;
+    }
+
+    // determine folder name from temple name (prefer templeDoc.name, then tags.name)
+    const templeNameRaw = templeDoc.name || (templeDoc.tags && templeDoc.tags.name) || String(templeId);
+    const folderName = slugify(templeNameRaw);
+    const repoFolder = `${GITHUB_IMAGES_DIR}/${folderName}`;
 
     // parse base64 and mime
     let mime: string;
     let base64: string;
     try {
-      const parsed = extractBase64AndMime(photoRaw);
+      const parsed = extractBase64AndMime(photo);
       mime = parsed.mime;
       base64 = parsed.base64;
     } catch (err: any) {
@@ -197,12 +259,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    // decide extension
     const ext = mime.split('/').pop()?.replace('jpeg', 'jpg') || 'jpg';
-
-    // slugify folder and filename base
-    const folder = slugify(String(templeId));
-    const repoFolder = `${GITHUB_IMAGES_DIR}/${folder}`;
 
     // ensure not exceeding configured max
     const list = await githubListFolder(repoFolder);
@@ -212,19 +269,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    const baseName = filenameProvided
-      ? slugify(String(filenameProvided).replace(/\.[^/.]+$/, ''))
-      : slugify(`${templeId}-photo`);
-    const finalName = uniqueFileName(baseName, ext);
+    const finalName = uniqueFileName(ext);
     const pathInRepo = `${repoFolder}/${finalName}`;
 
-    // Upload to GitHub (content must be base64 without data URL header)
-    const uploadedPath = await githubUploadFile(pathInRepo, base64, `Add photo for temple ${templeId} - ${finalName}`);
+    console.log(`Uploading photo for temple ${templeId} (folder '${folderName}') to ${pathInRepo}...`);
+
+    const uploadedPath = await githubUploadFile(
+      pathInRepo,
+      base64,
+      `Add photo for ${templeNameRaw} (templeId=${templeId}) - ${finalName}`
+    );
     if (!uploadedPath) throw new Error('Upload returned no path');
 
     const cdnUrl = `${CDN_BASE}${uploadedPath}`;
 
-    res.status(200).json({ ok: true, path: uploadedPath, url: cdnUrl });
+    // Update DB - add photo to unapproved_photos array
+    await collection.updateOne({ _id: templeDoc._id }, { $push: { unapproved_photos: { url: cdnUrl, name: finalName, templeName: templeNameRaw } } } as any);
+
+    res.status(200).json({ ok: true, path: uploadedPath, url: cdnUrl, folder: folderName, templeName: templeNameRaw });
   } catch (err: any) {
     console.error('upload-photo error:', err);
     const msg = err?.message || 'internal error';
